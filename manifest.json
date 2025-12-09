@@ -6,7 +6,7 @@
   "entry": "./remoteEntry.js",
   "permissions": [],
   "window": {
-    "defaultSize": { "width": 800, "height": 500 },
+    "defaultSize": { "width": 460, "height": 620 },
     "resizable": true,
     "allowMultiple": true
   }
