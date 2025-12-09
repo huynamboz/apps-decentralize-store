@@ -1,0 +1,14 @@
+{
+  "id": "example.note",
+  "name": "Note App",
+  "version": "0.1.0",
+  "framework": "react",
+  "entry": "./remoteEntry.js",
+  "permissions": [],
+  "window": {
+    "defaultSize": { "width": 800, "height": 500 },
+    "resizable": true,
+    "allowMultiple": true
+  }
+}
+
