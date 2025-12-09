@@ -6,7 +6,7 @@ let root: Root | null = null;
 
 export function mount(element: HTMLElement) {
   root = createRoot(element);
-  root.render(<App />);
+  root.render(React.createElement(App));
 }
 
 export function unmount() {
