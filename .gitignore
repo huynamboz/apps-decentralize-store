@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-dist/
 
 # Build outputs
 *.log
@@ -15,4 +14,5 @@ dist/
 # Environment
 .env
 .env.local
+
 
