@@ -10,12 +10,18 @@ export default defineConfig({
       fileName: () => "remoteEntry.js",
     },
     rollupOptions: {
-      // Bundle React/ReactDOM into the bundle to avoid version conflicts
-      // Each micro frontend will have its own React instance
-      // This prevents "ReactCurrentDispatcher" errors from multiple React instances
+      // Bundle React/ReactDOM completely into the bundle
+      // This ensures each micro frontend has its own isolated React instance
+      // Prevents "ReactCurrentDispatcher" errors from multiple React instances
+      // Empty external array = bundle everything, no external dependencies
+      external: [],
       output: {
         format: "es",
       },
+    },
+    // Ensure all dependencies are bundled
+    commonjsOptions: {
+      include: [/node_modules/],
     },
   },
 });

@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "framework": "react",
   "entry": "./remoteEntry.js",
+  "allow_delete_data_when_uninstall": true,
   "permissions": [],
   "window": {
     "defaultSize": { "width": 460, "height": 620 },
