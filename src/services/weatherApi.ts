@@ -1,181 +1,95 @@
-// OpenWeatherMap API service
-// Note: You'll need to get a free API key from https://openweathermap.org/api
-// For demo purposes, we'll use a public endpoint that works without API key
-// or you can set VITE_WEATHER_API_KEY in your .env file
+// Open-Meteo API service
+// Free weather API - no API key required
+// Documentation: https://open-meteo.com/en/docs
 
-const API_KEY = import.meta.env.VITE_WEATHER_API_KEY || '';
-const BASE_URL = 'https://api.openweathermap.org/data/2.5';
+const BASE_URL = 'https://api.open-meteo.com/v1/forecast';
 
-export interface WeatherCondition {
-  id: number;
-  main: string;
-  description: string;
-  icon: string;
-}
-
-export interface CurrentWeatherResponse {
-  coord: {
-    lon: number;
-    lat: number;
+export interface OpenMeteoResponse {
+  latitude: number;
+  longitude: number;
+  generationtime_ms: number;
+  utc_offset_seconds: number;
+  timezone: string;
+  timezone_abbreviation: string;
+  elevation: number;
+  hourly_units: {
+    time: string;
+    temperature_2m: string;
+    relativehumidity_2m?: string;
+    weathercode?: string;
   };
-  weather: WeatherCondition[];
-  base: string;
-  main: {
-    temp: number;
-    feels_like: number;
-    temp_min: number;
-    temp_max: number;
-    pressure: number;
-    humidity: number;
+  hourly: {
+    time: string[];
+    temperature_2m: number[];
+    relativehumidity_2m?: number[];
+    weathercode?: number[];
   };
-  visibility: number;
-  wind: {
-    speed: number;
-    deg: number;
+  daily_units?: {
+    time: string;
+    weathercode: string;
+    temperature_2m_max: string;
+    temperature_2m_min: string;
   };
-  clouds: {
-    all: number;
-  };
-  dt: number;
-  sys: {
-    type: number;
-    id: number;
-    country: string;
-    sunrise: number;
-    sunset: number;
-  };
-  timezone: number;
-  id: number;
-  name: string;
-  cod: number;
-}
-
-export interface ForecastItem {
-  dt: number;
-  main: {
-    temp: number;
-    feels_like: number;
-    temp_min: number;
-    temp_max: number;
-    pressure: number;
-    humidity: number;
-  };
-  weather: WeatherCondition[];
-  clouds: {
-    all: number;
-  };
-  wind: {
-    speed: number;
-    deg: number;
-  };
-  visibility: number;
-  pop: number;
-  dt_txt: string;
-}
-
-export interface ForecastResponse {
-  cod: string;
-  message: number;
-  cnt: number;
-  list: ForecastItem[];
-  city: {
-    id: number;
-    name: string;
-    coord: {
-      lat: number;
-      lon: number;
-    };
-    country: string;
-    population: number;
-    timezone: number;
-    sunrise: number;
-    sunset: number;
+  daily?: {
+    time: string[];
+    weathercode: number[];
+    temperature_2m_max: number[];
+    temperature_2m_min: number[];
   };
 }
 
-// Helper function to get weather icon emoji
-export function getWeatherIcon(iconCode: string): string {
-  const iconMap: Record<string, string> = {
-    '01d': '☀️', // clear sky day
-    '01n': '🌙', // clear sky night
-    '02d': '⛅', // few clouds day
-    '02n': '☁️', // few clouds night
-    '03d': '☁️', // scattered clouds
-    '03n': '☁️',
-    '04d': '☁️', // broken clouds
-    '04n': '☁️',
-    '09d': '🌧️', // shower rain
-    '09n': '🌧️',
-    '10d': '🌦️', // rain day
-    '10n': '🌧️', // rain night
-    '11d': '⛈️', // thunderstorm
-    '11n': '⛈️',
-    '13d': '❄️', // snow
-    '13n': '❄️',
-    '50d': '🌫️', // mist
-    '50n': '🌫️',
-  };
-  return iconMap[iconCode] || '☀️';
+// Weather code to condition mapping (WMO Weather interpretation codes)
+// https://open-meteo.com/en/docs
+export function getWeatherCondition(weatherCode: number): string {
+  if (weatherCode === 0) return 'Clear sky';
+  if (weatherCode === 1 || weatherCode === 2 || weatherCode === 3) return 'Partly cloudy';
+  if (weatherCode === 45 || weatherCode === 48) return 'Foggy';
+  if (weatherCode === 51 || weatherCode === 53 || weatherCode === 55) return 'Drizzle';
+  if (weatherCode === 56 || weatherCode === 57) return 'Freezing drizzle';
+  if (weatherCode === 61 || weatherCode === 63 || weatherCode === 65) return 'Rain';
+  if (weatherCode === 66 || weatherCode === 67) return 'Freezing rain';
+  if (weatherCode === 71 || weatherCode === 73 || weatherCode === 75) return 'Snow';
+  if (weatherCode === 77) return 'Snow grains';
+  if (weatherCode === 80 || weatherCode === 81 || weatherCode === 82) return 'Rain showers';
+  if (weatherCode === 85 || weatherCode === 86) return 'Snow showers';
+  if (weatherCode === 95) return 'Thunderstorm';
+  if (weatherCode === 96 || weatherCode === 99) return 'Thunderstorm with hail';
+  return 'Unknown';
 }
 
-// Helper function to convert Kelvin to Fahrenheit
-export function kelvinToFahrenheit(kelvin: number): number {
-  return Math.round(((kelvin - 273.15) * 9) / 5 + 32);
+// Weather code to emoji icon
+export function getWeatherIcon(weatherCode: number): string {
+  if (weatherCode === 0) return '☀️'; // Clear sky
+  if (weatherCode === 1 || weatherCode === 2 || weatherCode === 3) return '⛅'; // Partly cloudy
+  if (weatherCode === 45 || weatherCode === 48) return '🌫️'; // Foggy
+  if (weatherCode >= 51 && weatherCode <= 57) return '🌦️'; // Drizzle
+  if (weatherCode >= 61 && weatherCode <= 67) return '🌧️'; // Rain
+  if (weatherCode >= 71 && weatherCode <= 77) return '❄️'; // Snow
+  if (weatherCode >= 80 && weatherCode <= 82) return '🌦️'; // Rain showers
+  if (weatherCode >= 85 && weatherCode <= 86) return '❄️'; // Snow showers
+  if (weatherCode >= 95 && weatherCode <= 99) return '⛈️'; // Thunderstorm
+  return '☀️';
 }
 
-// Helper function to convert Kelvin to Celsius
-export function kelvinToCelsius(kelvin: number): number {
-  return Math.round(kelvin - 273.15);
+// Convert Celsius to Fahrenheit
+export function celsiusToFahrenheit(celsius: number): number {
+  return Math.round((celsius * 9) / 5 + 32);
 }
 
-// Get current weather by city name
-export async function getCurrentWeather(city: string): Promise<CurrentWeatherResponse> {
-  const url = `${BASE_URL}/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}`;
+// Get current weather and forecast
+// Using fixed coordinates for demo (Berlin, Germany)
+export async function getWeatherData(): Promise<OpenMeteoResponse> {
+  // Fixed coordinates: Berlin, Germany (52.52, 13.41)
+  const latitude = 52.52;
+  const longitude = 13.41;
   
-  if (!API_KEY) {
-    // Fallback: Use a mock API or show error
-    throw new Error('API key not configured. Please set VITE_WEATHER_API_KEY in your .env file or get a free API key from https://openweathermap.org/api');
-  }
-
+  const url = `${BASE_URL}?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,relativehumidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`;
+  
   const response = await fetch(url);
   
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('City not found. Please check the city name.');
-    }
-    if (response.status === 401) {
-      throw new Error('Invalid API key. Please check your API key configuration.');
-    }
     throw new Error(`Failed to fetch weather data: ${response.statusText}`);
   }
 
   return response.json();
-}
-
-// Get 5-day forecast by city name
-export async function getForecast(city: string): Promise<ForecastResponse> {
-  const url = `${BASE_URL}/forecast?q=${encodeURIComponent(city)}&appid=${API_KEY}`;
-  
-  if (!API_KEY) {
-    throw new Error('API key not configured. Please set VITE_WEATHER_API_KEY in your .env file or get a free API key from https://openweathermap.org/api');
-  }
-
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('City not found. Please check the city name.');
-    }
-    if (response.status === 401) {
-      throw new Error('Invalid API key. Please check your API key configuration.');
-    }
-    throw new Error(`Failed to fetch forecast data: ${response.statusText}`);
-  }
-
-  return response.json();
-}
-
-// Get weather icon URL from OpenWeatherMap
-export function getWeatherIconUrl(iconCode: string): string {
-  return `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
 }

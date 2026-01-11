@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
 import {
-  getCurrentWeather,
-  getForecast,
+  getWeatherData,
   getWeatherIcon,
-  kelvinToFahrenheit,
-  type CurrentWeatherResponse,
-  type ForecastResponse,
+  getWeatherCondition,
+  celsiusToFahrenheit,
+  type OpenMeteoResponse,
 } from "./services/weatherApi";
 
 interface ForecastDay {
@@ -23,7 +22,6 @@ interface CurrentWeather {
   condition: string;
   icon: string;
   humidity: number;
-  windSpeed: number;
   feelsLike: number;
   description: string;
 }
@@ -43,51 +41,39 @@ function getDayName(date: Date, index: number): string {
 }
 
 // Transform API response to app format
-function transformWeatherData(
-  current: CurrentWeatherResponse,
-  forecast: ForecastResponse
-): { current: CurrentWeather; forecast: ForecastDay[] } {
+function transformWeatherData(data: OpenMeteoResponse): { current: CurrentWeather; forecast: ForecastDay[] } {
+  // Get current weather from hourly data (first hour = current)
+  const currentHourIndex = 0;
+  const currentTemp = data.hourly.temperature_2m[currentHourIndex];
+  const currentHumidity = data.hourly.relativehumidity_2m?.[currentHourIndex] || 0;
+  const currentWeatherCode = data.hourly.weathercode?.[currentHourIndex] || 0;
+
   const currentWeather: CurrentWeather = {
-    location: `${current.name}, ${current.sys.country}`,
-    temperature: kelvinToFahrenheit(current.main.temp),
-    condition: current.weather[0].main,
-    icon: getWeatherIcon(current.weather[0].icon),
-    humidity: current.main.humidity,
-    windSpeed: Math.round(current.wind.speed * 2.237), // Convert m/s to mph
-    feelsLike: kelvinToFahrenheit(current.main.feels_like),
-    description: current.weather[0].description,
+    location: `Berlin, Germany (${data.latitude.toFixed(2)}, ${data.longitude.toFixed(2)})`,
+    temperature: celsiusToFahrenheit(currentTemp),
+    condition: getWeatherCondition(currentWeatherCode),
+    icon: getWeatherIcon(currentWeatherCode),
+    humidity: currentHumidity,
+    feelsLike: celsiusToFahrenheit(currentTemp), // Open-Meteo doesn't provide feels_like, using same temp
+    description: getWeatherCondition(currentWeatherCode).toLowerCase(),
   };
 
-  // Group forecast by day and get daily max/min
-  const dailyForecast: Record<string, ForecastItem[]> = {};
-  forecast.list.forEach((item) => {
-    const date = new Date(item.dt * 1000);
-    const dateKey = date.toDateString();
-    if (!dailyForecast[dateKey]) {
-      dailyForecast[dateKey] = [];
-    }
-    dailyForecast[dateKey].push(item);
+  // Get forecast from daily data
+  const forecastDays: ForecastDay[] = (data.daily?.time || []).slice(0, 5).map((dateStr, index) => {
+    const date = new Date(dateStr);
+    const weatherCode = data.daily?.weathercode?.[index] || 0;
+    const maxTemp = data.daily?.temperature_2m_max?.[index] || 0;
+    const minTemp = data.daily?.temperature_2m_min?.[index] || 0;
+
+    return {
+      day: getDayName(date, index),
+      date: formatDate(date),
+      high: celsiusToFahrenheit(maxTemp),
+      low: celsiusToFahrenheit(minTemp),
+      condition: getWeatherCondition(weatherCode),
+      icon: getWeatherIcon(weatherCode),
+    };
   });
-
-  // Convert to ForecastDay array (5 days)
-  const forecastDays: ForecastDay[] = Object.keys(dailyForecast)
-    .slice(0, 5)
-    .map((dateKey, index) => {
-      const dayItems = dailyForecast[dateKey];
-      const date = new Date(dateKey);
-      const maxTemp = Math.max(...dayItems.map((item) => kelvinToFahrenheit(item.main.temp_max)));
-      const minTemp = Math.min(...dayItems.map((item) => kelvinToFahrenheit(item.main.temp_min)));
-      const mainWeather = dayItems[Math.floor(dayItems.length / 2)].weather[0];
-
-      return {
-        day: getDayName(date, index),
-        date: formatDate(date),
-        high: maxTemp,
-        low: minTemp,
-        condition: mainWeather.main,
-        icon: getWeatherIcon(mainWeather.icon),
-      };
-    });
 
   return {
     current: currentWeather,
@@ -96,42 +82,30 @@ function transformWeatherData(
 }
 
 export function App() {
-  const [city, setCity] = useState("San Francisco");
-  const [searchInput, setSearchInput] = useState("San Francisco");
   const [weatherData, setWeatherData] = useState<{ current: CurrentWeather; forecast: ForecastDay[] } | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchWeatherData = async (cityName: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [current, forecast] = await Promise.all([
-        getCurrentWeather(cityName),
-        getForecast(cityName),
-      ]);
-      const transformed = transformWeatherData(current, forecast);
-      setWeatherData(transformed);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch weather data");
-      setWeatherData(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchWeatherData(city);
-  }, [city]);
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getWeatherData();
+        const transformed = transformWeatherData(data);
+        setWeatherData(transformed);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch weather data");
+        setWeatherData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchInput.trim()) {
-      setCity(searchInput.trim());
-    }
-  };
+    fetchData();
+  }, []);
 
-  if (loading && !weatherData) {
+  if (loading) {
     return (
       <div
         style={{
@@ -152,7 +126,7 @@ export function App() {
     );
   }
 
-  if (error && !weatherData) {
+  if (error) {
     return (
       <div
         style={{
@@ -168,39 +142,9 @@ export function App() {
         }}
       >
         <div style={{ fontSize: "24px", marginBottom: "8px" }}>⚠️</div>
-        <div style={{ fontSize: "16px", color: "#dc2626", marginBottom: "16px", textAlign: "center" }}>
+        <div style={{ fontSize: "16px", color: "#dc2626", textAlign: "center" }}>
           {error}
         </div>
-        <form onSubmit={handleSearch} style={{ display: "flex", gap: "8px", width: "100%", maxWidth: "400px" }}>
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Enter city name..."
-            style={{
-              flex: 1,
-              padding: "8px 12px",
-              fontSize: "14px",
-              border: "1px solid #d1d5db",
-              borderRadius: "6px",
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              padding: "8px 16px",
-              fontSize: "14px",
-              fontWeight: "500",
-              color: "#ffffff",
-              backgroundColor: "#3b82f6",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-            }}
-          >
-            Search
-          </button>
-        </form>
       </div>
     );
   }
@@ -221,61 +165,6 @@ export function App() {
         borderRadius: "0 0 1rem 1rem",
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          borderBottom: "1px solid rgba(17, 24, 39, 0.15)",
-          padding: "16px",
-        }}
-      >
-        <form onSubmit={handleSearch} style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search for a city..."
-            style={{
-              flex: 1,
-              padding: "8px 12px",
-              fontSize: "14px",
-              border: "1px solid #d1d5db",
-              borderRadius: "6px",
-            }}
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              padding: "8px 16px",
-              fontSize: "14px",
-              fontWeight: "500",
-              color: "#ffffff",
-              backgroundColor: loading ? "#9ca3af" : "#3b82f6",
-              border: "none",
-              borderRadius: "6px",
-              cursor: loading ? "not-allowed" : "pointer",
-            }}
-          >
-            {loading ? "Loading..." : "Search"}
-          </button>
-        </form>
-        {error && (
-          <div
-            style={{
-              padding: "8px 12px",
-              backgroundColor: "#fef2f2",
-              border: "1px solid #fecaca",
-              borderRadius: "6px",
-              color: "#dc2626",
-              fontSize: "14px",
-              marginTop: "8px",
-            }}
-          >
-            {error}
-          </div>
-        )}
-      </div>
-
       {/* Content */}
       <div
         style={{
@@ -337,7 +226,6 @@ export function App() {
                     style={{
                       fontSize: "16px",
                       color: "#6b7280",
-                      textTransform: "capitalize",
                     }}
                   >
                     {weatherData.current.condition}
@@ -388,18 +276,6 @@ export function App() {
                 <span style={{ fontSize: "14px", color: "#6b7280" }}>Humidity</span>
                 <span style={{ fontSize: "14px", fontWeight: "500", color: "#111827" }}>
                   {weatherData.current.humidity}%
-                </span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "8px 0",
-                }}
-              >
-                <span style={{ fontSize: "14px", color: "#6b7280" }}>Wind</span>
-                <span style={{ fontSize: "14px", fontWeight: "500", color: "#111827" }}>
-                  {weatherData.current.windSpeed} mph
                 </span>
               </div>
             </div>
@@ -477,7 +353,6 @@ export function App() {
                     flex: 1,
                     fontSize: "14px",
                     color: "#6b7280",
-                    textTransform: "capitalize",
                   }}
                 >
                   {day.condition}
