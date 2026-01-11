@@ -4,7 +4,23 @@
   "version": "0.1.0",
   "framework": "react",
   "entry": "./remoteEntry.js",
-  "permissions": [],
+  "description": "A weather application that displays current weather information",
+  "permissions": {
+    "network": {
+      "allowed": true,
+      "domains": ["api.open-meteo.com"],
+      "requireApproval": false
+    },
+    "storage": {
+      "allowed": true,
+      "type": "localStorage",
+      "requireApproval": false
+    },
+    "system": {
+      "allowed": false,
+      "requireApproval": false
+    }
+  },
   "window": {
     "defaultSize": { "width": 800, "height": 500 },
     "resizable": true,
