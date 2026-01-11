@@ -1,4 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import {
+  getCurrentWeather,
+  getForecast,
+  getWeatherIcon,
+  kelvinToFahrenheit,
+  type CurrentWeatherResponse,
+  type ForecastResponse,
+} from "./services/weatherApi";
 
 interface ForecastDay {
   day: string;
@@ -20,287 +28,186 @@ interface CurrentWeather {
   description: string;
 }
 
-const mockWeatherData: Record<string, { current: CurrentWeather; forecast: ForecastDay[] }> = {
-  "San Francisco, CA": {
-    current: {
-      location: "San Francisco, CA",
-      temperature: 72,
-      condition: "Partly Cloudy",
-      icon: "⛅",
-      humidity: 65,
-      windSpeed: 12,
-      feelsLike: 70,
-      description: "Partly cloudy with a chance of afternoon showers",
-    },
-    forecast: [
-      {
-        day: "Today",
-        date: "Dec 15",
-        high: 72,
-        low: 58,
-        condition: "Partly Cloudy",
-        icon: "⛅",
-      },
-      {
-        day: "Tomorrow",
-        date: "Dec 16",
-        high: 68,
-        low: 55,
-        condition: "Sunny",
-        icon: "☀️",
-      },
-      {
-        day: "Monday",
-        date: "Dec 17",
-        high: 65,
-        low: 52,
-        condition: "Rainy",
-        icon: "🌧️",
-      },
-      {
-        day: "Tuesday",
-        date: "Dec 18",
-        high: 70,
-        low: 56,
-        condition: "Cloudy",
-        icon: "☁️",
-      },
-      {
-        day: "Wednesday",
-        date: "Dec 19",
-        high: 73,
-        low: 59,
-        condition: "Sunny",
-        icon: "☀️",
-      },
-    ],
-  },
-  "New York, NY": {
-    current: {
-      location: "New York, NY",
-      temperature: 45,
-      condition: "Cloudy",
-      icon: "☁️",
-      humidity: 78,
-      windSpeed: 15,
-      feelsLike: 42,
-      description: "Cloudy skies with light winds",
-    },
-    forecast: [
-      {
-        day: "Today",
-        date: "Dec 15",
-        high: 45,
-        low: 32,
-        condition: "Cloudy",
-        icon: "☁️",
-      },
-      {
-        day: "Tomorrow",
-        date: "Dec 16",
-        high: 42,
-        low: 30,
-        condition: "Snow",
-        icon: "❄️",
-      },
-      {
-        day: "Monday",
-        date: "Dec 17",
-        high: 38,
-        low: 28,
-        condition: "Snow",
-        icon: "❄️",
-      },
-      {
-        day: "Tuesday",
-        date: "Dec 18",
-        high: 40,
-        low: 30,
-        condition: "Cloudy",
-        icon: "☁️",
-      },
-      {
-        day: "Wednesday",
-        date: "Dec 19",
-        high: 43,
-        low: 32,
-        condition: "Partly Cloudy",
-        icon: "⛅",
-      },
-    ],
-  },
-  "Los Angeles, CA": {
-    current: {
-      location: "Los Angeles, CA",
-      temperature: 78,
-      condition: "Sunny",
-      icon: "☀️",
-      humidity: 45,
-      windSpeed: 8,
-      feelsLike: 76,
-      description: "Clear skies and sunny throughout the day",
-    },
-    forecast: [
-      {
-        day: "Today",
-        date: "Dec 15",
-        high: 78,
-        low: 62,
-        condition: "Sunny",
-        icon: "☀️",
-      },
-      {
-        day: "Tomorrow",
-        date: "Dec 16",
-        high: 80,
-        low: 64,
-        condition: "Sunny",
-        icon: "☀️",
-      },
-      {
-        day: "Monday",
-        date: "Dec 17",
-        high: 75,
-        low: 60,
-        condition: "Partly Cloudy",
-        icon: "⛅",
-      },
-      {
-        day: "Tuesday",
-        date: "Dec 18",
-        high: 77,
-        low: 61,
-        condition: "Sunny",
-        icon: "☀️",
-      },
-      {
-        day: "Wednesday",
-        date: "Dec 19",
-        high: 79,
-        low: 63,
-        condition: "Sunny",
-        icon: "☀️",
-      },
-    ],
-  },
-  "Chicago, IL": {
-    current: {
-      location: "Chicago, IL",
-      temperature: 35,
-      condition: "Snow",
-      icon: "❄️",
-      humidity: 85,
-      windSpeed: 20,
-      feelsLike: 25,
-      description: "Heavy snow with strong winds",
-    },
-    forecast: [
-      {
-        day: "Today",
-        date: "Dec 15",
-        high: 35,
-        low: 22,
-        condition: "Snow",
-        icon: "❄️",
-      },
-      {
-        day: "Tomorrow",
-        date: "Dec 16",
-        high: 28,
-        low: 18,
-        condition: "Snow",
-        icon: "❄️",
-      },
-      {
-        day: "Monday",
-        date: "Dec 17",
-        high: 32,
-        low: 20,
-        condition: "Cloudy",
-        icon: "☁️",
-      },
-      {
-        day: "Tuesday",
-        date: "Dec 18",
-        high: 30,
-        low: 19,
-        condition: "Snow",
-        icon: "❄️",
-      },
-      {
-        day: "Wednesday",
-        date: "Dec 19",
-        high: 33,
-        low: 21,
-        condition: "Partly Cloudy",
-        icon: "⛅",
-      },
-    ],
-  },
-  "Miami, FL": {
-    current: {
-      location: "Miami, FL",
-      temperature: 82,
-      condition: "Sunny",
-      icon: "☀️",
-      humidity: 70,
-      windSpeed: 10,
-      feelsLike: 85,
-      description: "Hot and humid with clear skies",
-    },
-    forecast: [
-      {
-        day: "Today",
-        date: "Dec 15",
-        high: 82,
-        low: 72,
-        condition: "Sunny",
-        icon: "☀️",
-      },
-      {
-        day: "Tomorrow",
-        date: "Dec 16",
-        high: 84,
-        low: 74,
-        condition: "Partly Cloudy",
-        icon: "⛅",
-      },
-      {
-        day: "Monday",
-        date: "Dec 17",
-        high: 83,
-        low: 73,
-        condition: "Sunny",
-        icon: "☀️",
-      },
-      {
-        day: "Tuesday",
-        date: "Dec 18",
-        high: 85,
-        low: 75,
-        condition: "Sunny",
-        icon: "☀️",
-      },
-      {
-        day: "Wednesday",
-        date: "Dec 19",
-        high: 84,
-        low: 74,
-        condition: "Partly Cloudy",
-        icon: "⛅",
-      },
-    ],
-  },
-};
+// Helper function to format date
+function formatDate(date: Date): string {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${months[date.getMonth()]} ${date.getDate()}`;
+}
+
+// Helper function to get day name
+function getDayName(date: Date, index: number): string {
+  if (index === 0) return "Today";
+  if (index === 1) return "Tomorrow";
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  return days[date.getDay()];
+}
+
+// Transform API response to app format
+function transformWeatherData(
+  current: CurrentWeatherResponse,
+  forecast: ForecastResponse
+): { current: CurrentWeather; forecast: ForecastDay[] } {
+  const currentWeather: CurrentWeather = {
+    location: `${current.name}, ${current.sys.country}`,
+    temperature: kelvinToFahrenheit(current.main.temp),
+    condition: current.weather[0].main,
+    icon: getWeatherIcon(current.weather[0].icon),
+    humidity: current.main.humidity,
+    windSpeed: Math.round(current.wind.speed * 2.237), // Convert m/s to mph
+    feelsLike: kelvinToFahrenheit(current.main.feels_like),
+    description: current.weather[0].description,
+  };
+
+  // Group forecast by day and get daily max/min
+  const dailyForecast: Record<string, ForecastItem[]> = {};
+  forecast.list.forEach((item) => {
+    const date = new Date(item.dt * 1000);
+    const dateKey = date.toDateString();
+    if (!dailyForecast[dateKey]) {
+      dailyForecast[dateKey] = [];
+    }
+    dailyForecast[dateKey].push(item);
+  });
+
+  // Convert to ForecastDay array (5 days)
+  const forecastDays: ForecastDay[] = Object.keys(dailyForecast)
+    .slice(0, 5)
+    .map((dateKey, index) => {
+      const dayItems = dailyForecast[dateKey];
+      const date = new Date(dateKey);
+      const maxTemp = Math.max(...dayItems.map((item) => kelvinToFahrenheit(item.main.temp_max)));
+      const minTemp = Math.min(...dayItems.map((item) => kelvinToFahrenheit(item.main.temp_min)));
+      const mainWeather = dayItems[Math.floor(dayItems.length / 2)].weather[0];
+
+      return {
+        day: getDayName(date, index),
+        date: formatDate(date),
+        high: maxTemp,
+        low: minTemp,
+        condition: mainWeather.main,
+        icon: getWeatherIcon(mainWeather.icon),
+      };
+    });
+
+  return {
+    current: currentWeather,
+    forecast: forecastDays,
+  };
+}
 
 export function App() {
-  const locations = Object.keys(mockWeatherData);
-  const [selectedLocation, setSelectedLocation] = useState(locations[0]);
-  const weatherData = mockWeatherData[selectedLocation];
+  const [city, setCity] = useState("San Francisco");
+  const [searchInput, setSearchInput] = useState("San Francisco");
+  const [weatherData, setWeatherData] = useState<{ current: CurrentWeather; forecast: ForecastDay[] } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleLocationChange = (location: string) => {
-    setSelectedLocation(location);
+  const fetchWeatherData = async (cityName: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [current, forecast] = await Promise.all([
+        getCurrentWeather(cityName),
+        getForecast(cityName),
+      ]);
+      const transformed = transformWeatherData(current, forecast);
+      setWeatherData(transformed);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch weather data");
+      setWeatherData(null);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchWeatherData(city);
+  }, [city]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchInput.trim()) {
+      setCity(searchInput.trim());
+    }
+  };
+
+  if (loading && !weatherData) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          width: "100%",
+          height: "100%",
+          backgroundColor: "#ffffff",
+          borderRadius: "0 0 1rem 1rem",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "24px", marginBottom: "8px" }}>⏳</div>
+          <div style={{ fontSize: "16px", color: "#6b7280" }}>Loading weather data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !weatherData) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          width: "100%",
+          height: "100%",
+          backgroundColor: "#ffffff",
+          borderRadius: "0 0 1rem 1rem",
+          padding: "24px",
+        }}
+      >
+        <div style={{ fontSize: "24px", marginBottom: "8px" }}>⚠️</div>
+        <div style={{ fontSize: "16px", color: "#dc2626", marginBottom: "16px", textAlign: "center" }}>
+          {error}
+        </div>
+        <form onSubmit={handleSearch} style={{ display: "flex", gap: "8px", width: "100%", maxWidth: "400px" }}>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Enter city name..."
+            style={{
+              flex: 1,
+              padding: "8px 12px",
+              fontSize: "14px",
+              border: "1px solid #d1d5db",
+              borderRadius: "6px",
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              padding: "8px 16px",
+              fontSize: "14px",
+              fontWeight: "500",
+              color: "#ffffff",
+              backgroundColor: "#3b82f6",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+          >
+            Search
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  if (!weatherData) {
+    return null;
+  }
 
   return (
     <div
@@ -321,54 +228,52 @@ export function App() {
           padding: "16px",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <span
+        <form onSubmit={handleSearch} style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search for a city..."
             style={{
-              fontSize: "16px",
+              flex: 1,
+              padding: "8px 12px",
+              fontSize: "14px",
+              border: "1px solid #d1d5db",
+              borderRadius: "6px",
+            }}
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              padding: "8px 16px",
+              fontSize: "14px",
               fontWeight: "500",
-              color: "#111827",
+              color: "#ffffff",
+              backgroundColor: loading ? "#9ca3af" : "#3b82f6",
+              border: "none",
+              borderRadius: "6px",
+              cursor: loading ? "not-allowed" : "pointer",
             }}
           >
-            Location:
-          </span>
-          {locations.map((location) => (
-            <button
-              key={location}
-              onClick={() => handleLocationChange(location)}
-              style={{
-                padding: "6px 12px",
-                fontSize: "14px",
-                fontWeight: "500",
-                color: selectedLocation === location ? "#ffffff" : "#3b82f6",
-                backgroundColor:
-                  selectedLocation === location ? "#3b82f6" : "transparent",
-                border: "1px solid #3b82f6",
-                borderRadius: "6px",
-                cursor: "pointer",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                if (selectedLocation !== location) {
-                  e.currentTarget.style.backgroundColor = "rgba(59, 130, 246, 0.1)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (selectedLocation !== location) {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }
-              }}
-            >
-              {location.split(",")[0]}
-            </button>
-          ))}
-        </div>
+            {loading ? "Loading..." : "Search"}
+          </button>
+        </form>
+        {error && (
+          <div
+            style={{
+              padding: "8px 12px",
+              backgroundColor: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: "6px",
+              color: "#dc2626",
+              fontSize: "14px",
+              marginTop: "8px",
+            }}
+          >
+            {error}
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -432,6 +337,7 @@ export function App() {
                     style={{
                       fontSize: "16px",
                       color: "#6b7280",
+                      textTransform: "capitalize",
                     }}
                   >
                     {weatherData.current.condition}
@@ -443,6 +349,7 @@ export function App() {
                   fontSize: "14px",
                   color: "#6b7280",
                   margin: "8px 0 0 0",
+                  textTransform: "capitalize",
                 }}
               >
                 {weatherData.current.description}
@@ -570,6 +477,7 @@ export function App() {
                     flex: 1,
                     fontSize: "14px",
                     color: "#6b7280",
+                    textTransform: "capitalize",
                   }}
                 >
                   {day.condition}
