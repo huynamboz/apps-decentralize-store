@@ -8,7 +8,7 @@
   "permissions": {
     "network": {
       "allowed": true,
-      "domains": ["api.open-meteo.com"]
+      "domains": ["api.-meteo.com"]
     },
     "storage": {
       "allowed": true,
