@@ -8,17 +8,14 @@
   "permissions": {
     "network": {
       "allowed": true,
-      "domains": ["api.open-meteo.com"],
-      "requireApproval": false
+      "domains": ["api.open-meteo.com"]
     },
     "storage": {
       "allowed": true,
-      "type": "localStorage",
-      "requireApproval": false
+      "type": "localStorage"
     },
     "system": {
-      "allowed": false,
-      "requireApproval": false
+      "allowed": false
     }
   },
   "window": {
