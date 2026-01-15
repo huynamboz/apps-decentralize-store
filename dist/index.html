@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weather App</title>
+    <script type="module" crossorigin src="/apps/weather-app/assets/index-BtknbPtu.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      window.__NODEOS_BRIDGE__ = {
+        windowId: params.get("windowId"),
+        targetOrigin: params.get("parentOrigin"),
+      };
+    </script>
+    <script src="http://ui.local/bridge.js"></script>
+  </body>
+</html>
