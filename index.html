@@ -7,6 +7,14 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      window.__NODEOS_BRIDGE__ = {
+        windowId: params.get("windowId"),
+        targetOrigin: params.get("parentOrigin"),
+      };
+    </script>
+    <script src="http://ui.local/bridge.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
