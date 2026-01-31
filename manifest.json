@@ -2,21 +2,10 @@
   "id": "example.weather",
   "name": "Weather App",
   "version": "0.1.0",
-  "framework": "react",
-  "entry": "./remoteEntry.js",
   "description": "A weather application that displays current weather information",
   "permissions": {
-    "network": {
-      "allowed": true,
-      "domains": ["api.open-meteo.com"]
-    },
-    "storage": {
-      "allowed": true,
-      "type": "localStorage"
-    },
-    "system": {
-      "allowed": false
-    }
+    "network": ["api.open-meteo.com"],
+    "storage": ["localStorage"]
   },
   "window": {
     "defaultSize": { "width": 800, "height": 500 },
