@@ -2,10 +2,10 @@
   "id": "example.todo",
   "name": "Todo App",
   "version": "0.1.0",
-  "framework": "react",
-  "entry": "./remoteEntry.js",
-  "allow_delete_data_when_uninstall": true,
-  "permissions": [],
+  "description": "A todo list application",
+  "permissions": {
+    "storage": ["localStorage"]
+  },
   "window": {
     "defaultSize": { "width": 460, "height": 620 },
     "resizable": true,

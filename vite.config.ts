@@ -1,28 +1,22 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { viteSingleFile } from "vite-plugin-singlefile";
+import postcssUrl from "postcss-url";
 
-export default defineConfig({
-  plugins: [react()],
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), viteSingleFile()],
+  base: "/apps/todo-app/",
   build: {
-    lib: {
-      entry: "remoteEntry.ts",
-      formats: ["es"],
-      fileName: () => "remoteEntry.js",
-    },
-    rollupOptions: {
-      // Bundle React/ReactDOM completely into the bundle
-      // This ensures each micro frontend has its own isolated React instance
-      // Prevents "ReactCurrentDispatcher" errors from multiple React instances
-      // Empty external array = bundle everything, no external dependencies
-      external: [],
-      output: {
-        format: "es",
-      },
-    },
-    // Ensure all dependencies are bundled
-    commonjsOptions: {
-      include: [/node_modules/],
+    minify: mode === "production",
+    cssMinify: mode === "production",
+    sourcemap: mode !== "production" ? "inline" : false,
+    emptyOutDir: false,
+    outDir: "dist",
+  },
+  css: {
+    postcss: {
+      plugins: [postcssUrl({ url: "inline" })],
     },
   },
-});
+}));
 
