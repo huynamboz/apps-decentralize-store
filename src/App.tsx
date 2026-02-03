@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   getWeatherData,
   getWeatherIcon,
@@ -85,6 +87,35 @@ export function App() {
   const [weatherData, setWeatherData] = useState<{ current: CurrentWeather; forecast: ForecastDay[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [historyPayment, setHistoryPayment] = useState<string>("");
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const handleGetHistoryPayment = async () => {
+    setLoadingHistory(true);
+    try {
+      const response = await fetch("http://localhost:3000/api/protected/history-payment");
+      const data = await response.json();
+
+      if (!response.ok || data.success === false) {
+        const errorMessage = data.error?.message || "Failed to fetch history payment";
+        const missingPermissions = data.error?.details?.missingPermissions;
+        if (missingPermissions?.length) {
+          toast.error(`${errorMessage}: Missing permissions - ${missingPermissions.join(", ")}`);
+        } else {
+          toast.error(errorMessage);
+        }
+        setHistoryPayment("");
+      } else {
+        setHistoryPayment(JSON.stringify(data, null, 2));
+        toast.success("History payment fetched successfully!");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Network error");
+      setHistoryPayment("");
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -373,7 +404,60 @@ export function App() {
             ))}
           </div>
         </div>
+
+        {/* History Payment Section */}
+        <div style={{ marginTop: "24px", borderTop: "1px solid rgba(17, 24, 39, 0.15)", paddingTop: "16px" }}>
+          <button
+            onClick={handleGetHistoryPayment}
+            disabled={loadingHistory}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              backgroundColor: loadingHistory ? "#9ca3af" : "#3b82f6",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "14px",
+              fontWeight: "500",
+              cursor: loadingHistory ? "not-allowed" : "pointer",
+              transition: "background-color 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              if (!loadingHistory) {
+                e.currentTarget.style.backgroundColor = "#2563eb";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loadingHistory) {
+                e.currentTarget.style.backgroundColor = "#3b82f6";
+              }
+            }}
+          >
+            {loadingHistory ? "Loading..." : "Get History Payment"}
+          </button>
+
+          {historyPayment && (
+            <textarea
+              readOnly
+              value={historyPayment}
+              style={{
+                width: "100%",
+                marginTop: "12px",
+                padding: "12px",
+                backgroundColor: "#f3f4f6",
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                fontSize: "12px",
+                fontFamily: "monospace",
+                minHeight: "150px",
+                resize: "vertical",
+                color: "#111827",
+              }}
+            />
+          )}
+        </div>
       </div>
+      <ToastContainer position="top-right" autoClose={5000} />
     </div>
   );
 }
