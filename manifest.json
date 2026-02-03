@@ -4,8 +4,9 @@
   "version": "0.1.0",
   "description": "A weather application that displays current weather information",
   "permissions": {
-    "network": ["api.open-meteo.com"],
-    "storage": ["localStorage"]
+    "network": ["api.open-meteo.com", "localhost:3003"],
+    "storage": ["host_storage"],
+    "api": ["get_history_payment", "send_money", "get_amount"]
   },
   "window": {
     "defaultSize": { "width": 800, "height": 500 },
