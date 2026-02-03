@@ -93,7 +93,7 @@ export function App() {
   const handleGetHistoryPayment = async () => {
     setLoadingHistory(true);
     try {
-      const response = await fetch("http://localhost:3000/api/protected/history-payment");
+      const response = await fetch("http://localhost:3003/api/protected/history-payment");
       const data = await response.json();
 
       if (!response.ok || data.success === false) {
