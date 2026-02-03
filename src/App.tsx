@@ -89,6 +89,32 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [historyPayment, setHistoryPayment] = useState<string>("");
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [hostToken, setHostToken] = useState<string>("");
+
+  // Listen for token from host
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "token_response") {
+        setHostToken(event.data.token || JSON.stringify(event.data, null, 2));
+        toast.success("Token received from host!");
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  const handleRequestToken = () => {
+    const permissions = ["get_history_payment", "send_money", "get_amount"];
+    window.parent.postMessage(
+      {
+        type: "request_token",
+        permissions,
+      },
+      "*"
+    );
+    toast.info("Token request sent to host");
+  };
 
   const handleGetHistoryPayment = async () => {
     setLoadingHistory(true);
@@ -452,6 +478,53 @@ export function App() {
                 minHeight: "150px",
                 resize: "vertical",
                 color: "#111827",
+              }}
+            />
+          )}
+        </div>
+
+        {/* Request Token Section */}
+        <div style={{ marginTop: "16px", borderTop: "1px solid rgba(17, 24, 39, 0.15)", paddingTop: "16px" }}>
+          <button
+            onClick={handleRequestToken}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              backgroundColor: "#10b981",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "14px",
+              fontWeight: "500",
+              cursor: "pointer",
+              transition: "background-color 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#059669";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#10b981";
+            }}
+          >
+            Request Token from Host
+          </button>
+
+          {hostToken && (
+            <textarea
+              readOnly
+              value={hostToken}
+              style={{
+                width: "100%",
+                marginTop: "12px",
+                padding: "12px",
+                backgroundColor: "#ecfdf5",
+                border: "1px solid #a7f3d0",
+                borderRadius: "8px",
+                fontSize: "12px",
+                fontFamily: "monospace",
+                minHeight: "100px",
+                resize: "vertical",
+                color: "#065f46",
               }}
             />
           )}
