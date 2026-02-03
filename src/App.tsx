@@ -89,14 +89,18 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [historyPayment, setHistoryPayment] = useState<string>("");
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [hostToken, setHostToken] = useState<string>("");
+  const [hostToken, setHostToken] = useState<string>(() => {
+    return localStorage.getItem("host_token") || "";
+  });
 
   // Listen for token from host
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === "token_response") {
-        setHostToken(event.data.token || JSON.stringify(event.data, null, 2));
-        toast.success("Token received from host!");
+        const token = event.data.token || JSON.stringify(event.data, null, 2);
+        setHostToken(token);
+        localStorage.setItem("host_token", token);
+        toast.success("Token received and saved!");
       }
     };
 
@@ -119,7 +123,16 @@ export function App() {
   const handleGetHistoryPayment = async () => {
     setLoadingHistory(true);
     try {
-      const response = await fetch("http://localhost:3003/api/protected/history-payment");
+      const token = localStorage.getItem("host_token");
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const response = await fetch("http://localhost:3003/api/protected/history-payment", {
+        headers,
+      });
       const data = await response.json();
 
       if (!response.ok || data.success === false) {
