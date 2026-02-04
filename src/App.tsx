@@ -106,23 +106,34 @@ export function App() {
     const handleMessage = (event: MessageEvent) => {
       // Handle token response
       if (event.data?.type === "token_response") {
-        const token = event.data.token || JSON.stringify(event.data, null, 2);
-        setHostToken(token);
-        // Save token to host storage
-        window.parent.postMessage(
-          {
-            type: "save_storage",
-            key: "host_token",
-            data: token,
-          },
-          "*"
-        );
-        toast.success("Token received and saved!");
+        // Check for errors first
+        if (event.data.error) {
+          toast.error(`Token request failed: ${event.data.error}`);
+          return;
+        }
+
+        // Only process valid token
+        if (event.data.token && typeof event.data.token === "string") {
+          const token = event.data.token;
+          setHostToken(token);
+          // Save token to host storage
+          window.parent.postMessage(
+            {
+              type: "save_storage",
+              key: "host_token",
+              data: token,
+            },
+            "*"
+          );
+          toast.success("Token received and saved!");
+        } else {
+          toast.warning("No valid token received");
+        }
       }
 
       // Handle storage response
       if (event.data?.type === "storage_response" && event.data?.key === "host_token") {
-        if (event.data.data) {
+        if (event.data.data && typeof event.data.data === "string") {
           setHostToken(event.data.data);
         }
       }
