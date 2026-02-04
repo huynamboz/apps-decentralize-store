@@ -147,12 +147,15 @@ export function App() {
   const handleGetHistoryPayment = async () => {
     setLoadingHistory(true);
     try {
-      const headers: HeadersInit = {
+      const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
-      if (hostToken) {
+
+      // Only add Authorization header if hostToken is a valid string
+      if (hostToken && typeof hostToken === "string" && hostToken.trim()) {
         headers["Authorization"] = `Bearer ${hostToken}`;
       }
+
       const response = await fetch("http://localhost:3003/api/protected/history-payment", {
         headers,
       });
