@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
 import {
   getWeatherData,
   getWeatherIcon,
@@ -8,6 +9,15 @@ import {
   celsiusToFahrenheit,
   type OpenMeteoResponse,
 } from "./services/weatherApi";
+
+// Create axios instance for history-payment API
+const historyApiClient = axios.create({
+  baseURL: "http://localhost:3003/api",
+  timeout: 10000,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
 interface ForecastDay {
   day: string;
@@ -147,21 +157,19 @@ export function App() {
   const handleGetHistoryPayment = async () => {
     setLoadingHistory(true);
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      // Only add Authorization header if hostToken is a valid string
+      // Setup headers with Authorization if token exists
+      const headers: Record<string, string> = {};
       if (hostToken && typeof hostToken === "string" && hostToken.trim()) {
         headers["Authorization"] = `Bearer ${hostToken}`;
       }
 
-      const response = await fetch("http://localhost:3003/api/protected/history-payment", {
+      const response = await historyApiClient.get("/protected/history-payment", {
         headers,
       });
-      const data = await response.json();
 
-      if (!response.ok || data.success === false) {
+      const data = response.data;
+
+      if (data.success === false) {
         const errorMessage = data.error?.message || "Failed to fetch history payment";
         const missingPermissions = data.error?.details?.missingPermissions;
         if (missingPermissions?.length) {
@@ -175,7 +183,17 @@ export function App() {
         toast.success("History payment fetched successfully!");
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Network error");
+      if (axios.isAxiosError(err)) {
+        const errorMessage = err.response?.data?.error?.message || err.message;
+        const missingPermissions = err.response?.data?.error?.details?.missingPermissions;
+        if (missingPermissions?.length) {
+          toast.error(`${errorMessage}: Missing permissions - ${missingPermissions.join(", ")}`);
+        } else {
+          toast.error(errorMessage);
+        }
+      } else {
+        toast.error(err instanceof Error ? err.message : "Network error");
+      }
       setHistoryPayment("");
     } finally {
       setLoadingHistory(false);

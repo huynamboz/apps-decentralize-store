@@ -2,7 +2,18 @@
 // Free weather API - no API key required
 // Documentation: https://open-meteo.com/en/docs
 
+import axios from 'axios';
+
 const BASE_URL = 'https://api.open-meteo.com/v1/forecast';
+
+// Create axios instance for weather API
+const weatherApiClient = axios.create({
+  baseURL: 'https://api.open-meteo.com/v1',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 export interface OpenMeteoResponse {
   latitude: number;
@@ -82,14 +93,23 @@ export async function getWeatherData(): Promise<OpenMeteoResponse> {
   // Fixed coordinates: Berlin, Germany (52.52, 13.41)
   const latitude = 52.52;
   const longitude = 13.41;
-  
-  const url = `${BASE_URL}?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,relativehumidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`;
-  
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch weather data: ${response.statusText}`);
-  }
 
-  return response.json();
+  try {
+    const response = await weatherApiClient.get<OpenMeteoResponse>('/forecast', {
+      params: {
+        latitude,
+        longitude,
+        hourly: 'temperature_2m,relativehumidity_2m,weathercode',
+        daily: 'weathercode,temperature_2m_max,temperature_2m_min',
+        timezone: 'auto',
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(`Failed to fetch weather data: ${error.message}`);
+    }
+    throw error;
+  }
 }
